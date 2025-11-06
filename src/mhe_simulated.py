@@ -21,7 +21,7 @@ if __name__ == "__main__":
     # Measurement configuration: velocity sensors at disk numbers 5, 6
     measurement_config = {
         'torque_sensors': [],  # Torque sensors
-        'velocity_sensors': [6, 7],  # Disk numbers (will be converted to state indices)
+        'velocity_sensors': [24, 27],  # Disk numbers (will be converted to state indices)
         'inputs': ['motor']
     }
     
@@ -45,18 +45,17 @@ if __name__ == "__main__":
     x_init[33:39] = x_init[33:39] / 3
     x_init[39:] = x_init[39:] / 4
 
-
     # Data configuration
     data_config = {
         'initial_state': x_init,
         'load_case': 'step',
         'measurement_config': measurement_config,
-        'pid_params': {'kp': 0.4, 'ki': 0.15, 'kd': 0.001},
+        'pid_params': {'kp': 0.2, 'ki': 0.1, 'kd': 0.0001},
         'speed_target': 200.0,
-        'actuator_noise_std': 0.05,
-        'process_noise_std': 0.01,
-        'measurement_noise_std': 0.1,
-        'time': {'start': 0, 'end': 5, 'n_points': 1500}
+        'actuator_noise_std': 0.0005,
+        'process_noise_std': 0.001,
+        'measurement_noise_std': 0.01,
+        'time': {'start': 0, 'end': 7, 'n_points': 2000}
     }
     
     # Run estimation using unified workflow

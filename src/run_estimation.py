@@ -157,17 +157,6 @@ def run_estimation(
     else:
         raise ValueError("No inputs specified in measurement_config['inputs']")
     
-    # Prepare truth data if available
-    truth = {}
-    if 'reference' in data:
-        ref = data['reference']
-        if 'x' in ref:
-            truth['x'] = ref['x']
-        if 'u2' in ref:
-            truth['u2'] = ref['u2']
-        if 'u1_noisy' in ref:
-            truth['u1_noisy'] = ref['u1_noisy']
-    
     # Step 4: Create system matrices in minimal form
     print("\nStep 4: Creating system matrices in minimal form...")
     if estimator_settings is None:
@@ -191,7 +180,7 @@ def run_estimation(
     print(f"  Measurement matrix C: {estimator.C.shape}")
     
     # Load data into estimator
-    estimator.load_data(y=y, u1=u1, t=data['time'], truth=truth if truth else None)
+    estimator.load_data(y=y, u1=u1, t=data['time'])
     
     # Step 5: Perform estimation
     print("\nStep 5: Performing estimation...")

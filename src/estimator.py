@@ -124,7 +124,6 @@ class StateEstimator(ABC):
         self.y = None
         self.u1 = None
         self.t = None
-        self.truth = {}
     
     def setup_system_matrices(self):
         """
@@ -143,7 +142,7 @@ class StateEstimator(ABC):
             velocity_sensor_locations=velocity_sensors
         )
     
-    def load_data(self, y: np.ndarray, u1: np.ndarray, t: np.ndarray, truth: Optional[dict] = None):
+    def load_data(self, y: np.ndarray, u1: np.ndarray, t: np.ndarray):
         """
         Load measurement data and optional ground truth for estimation.
         
@@ -156,11 +155,6 @@ class StateEstimator(ABC):
             Known input sequence (n_inputs1 x N) or (N,) for single input
         t : ndarray
             Time vector (N,)
-        truth : dict, optional
-            Dictionary containing ground truth data with keys:
-            - 'x': true state sequence (N x n_states)
-            - 'u2': true unknown input sequence (N,) or (n_inputs2 x N)
-            - 'u1_noisy': noisy version of u1 if applicable
         """
         # Validate y shape
         expected_outputs = self.C.shape[0]
@@ -170,7 +164,6 @@ class StateEstimator(ABC):
         self.y = y
         self.u1 = u1
         self.t = t
-        self.truth = truth or {}
     
     @abstractmethod
     def estimate(self, x_init: Optional[np.ndarray] = None):
@@ -513,9 +506,6 @@ class MHEEstimator(StateEstimator):
             velocity_sensor_state_indices=np.array(self.sensor_metadata['velocity_sensor_state_indices']),  # Converted state indices
             sensor_types=np.array(self.sensor_metadata['sensor_types']),
             sensor_indices=np.array(self.sensor_metadata['sensor_indices']),
-            truth_present=np.array([bool(self.truth)]),
-            true_x=self.truth.get("x", None),
-            true_u2=self.truth.get("u2", None),
         )
 
     def plot_results(self, results_path: str, reference_data: Optional[dict] = None):

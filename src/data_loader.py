@@ -301,6 +301,12 @@ def simulate_data(assembly, config: Dict) -> Dict:
     # Transform to minimal form using minimize function
     A_c = minimize(A_full, assembly, 'state')  # X @ A @ X_inv
     B_c = minimize(B_full, assembly, 'input')  # X @ B
+
+    # Only retain the first and last columns of B_c
+    if B_c.shape[1] >= 2:
+        B_c = B_c[:, [0, -1]]
+    else:
+        raise ValueError("B_c does not have enough columns to retain first and last.")
     
     # Setup time vector
     if isinstance(config['time'], dict):
@@ -362,7 +368,7 @@ def simulate_data(assembly, config: Dict) -> Dict:
     xout = np.zeros((N, n_states))
     y = np.zeros((N, C_meas.shape[0]))
     u1 = np.zeros(N)
-    u1_clean = np.zeros(N)
+    u1_clean = np.zeros(N)  
     
     # Convert speed_target to array if scalar
     if np.isscalar(speed_target):
@@ -390,7 +396,6 @@ def simulate_data(assembly, config: Dict) -> Dict:
         # Add actuator noise to u1
         actuator_noise = np.random.normal(0, actuator_noise_std)
         u1[i] = u1_clean[i] + actuator_noise
-        u1[i] = np.clip(u1[i], -10, 10)
         
         # State update with process noise
         if i < N - 1:
@@ -410,6 +415,35 @@ def simulate_data(assembly, config: Dict) -> Dict:
     
     torque_meas = np.column_stack(torque_measurements) if torque_measurements else np.array([]).reshape(N, 0)
     velocity_meas = np.column_stack(velocity_measurements) if velocity_measurements else np.array([]).reshape(N, 0)
+    
+    # Plot simulation results for verification
+    fig, axes = plt.subplots(3, 1, figsize=(10, 8))
+    
+    # Plot inputs (motor torque and load)
+    axes[0].plot(t, u1, 'b-', linewidth=1.5, label='Motor Torque (u1)')
+    axes[0].plot(t, u2, 'orange', linewidth=1.5, label='Load Torque (u2)')
+    axes[0].set_xlabel('Time (s)')
+    axes[0].set_ylabel('Torque (Nm)')
+    axes[0].set_title('Inputs: Motor and Load Torque')
+    axes[0].legend()
+    axes[0].grid(True, alpha=0.3)
+    
+    # Plot one velocity state from xout
+    axes[1].plot(t, xout[:, velocity_state_idx], 'g-', linewidth=1.5)
+    axes[1].set_xlabel('Time (s)')
+    axes[1].set_ylabel('Velocity (rad/s)')
+    axes[1].set_title('Velocity State (from xout)')
+    axes[1].grid(True, alpha=0.3)
+    
+    # Plot one angle/torque state from xout (first state, typically angle)
+    axes[2].plot(t, xout[:, 7], 'r-', linewidth=1.5)
+    axes[2].set_xlabel('Time (s)')
+    axes[2].set_ylabel('Shaft Torque (Nm)')
+    axes[2].set_title('Shaft Torque (from xout)')
+    axes[2].grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    plt.show()
     
     return {
         'time': t,
