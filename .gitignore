@@ -33,13 +33,6 @@ env/
 *.swo
 *~
 
-# Data files (large binary files)
-data/*.feather
-data/*.npz
-data/*.tdms
-data/*.tdms_index
-data/*.csv
-
 # Keep data directory structure but ignore large files
 !data/.gitkeep
 !data/readme.txt
