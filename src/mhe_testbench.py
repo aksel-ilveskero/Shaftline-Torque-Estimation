@@ -50,7 +50,7 @@ if __name__ == "__main__":
         measurement_config=measurement_config,
         estimator_settings=estimator_settings,
         output_path='mhe_results.npz',
-        plot=False
+        plot=True
     )
 
 
