@@ -13,9 +13,7 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 import cvxpy as cp
-from utils import c2d, minimize
-
-from ot_assembly import create_measurement_matrix
+from utils import c2d, minimize, create_measurement_matrix
 
 
 class StateEstimator(ABC):
@@ -38,7 +36,8 @@ class StateEstimator(ABC):
             Dictionary with keys:
             - 'torque_sensors': list of disk numbers for torque sensors (can be empty)
             - 'velocity_sensors': list of disk numbers for velocity sensors (can be empty)
-            - 'inputs': list of input names, e.g., ['motor', 'load'] or ['u1', 'u2']
+            - 'inputs': list of input names, e.g., ['motor'], ['load'], or ['motor', 'load']
+            Inputs specified in this list are measured (go to B1), others are unmeasured (go to B2).
             Note: Disk numbers are automatically converted to state indices with appropriate offsets.
         settings : dict
             Estimator-specific settings dictionary
@@ -92,12 +91,34 @@ class StateEstimator(ABC):
         
         # Split B matrix based on inputs configuration
         self.inputs_config = self.measurement_config.get('inputs', ['motor', 'load'])
-        if len(self.inputs_config) != 2:
-            raise ValueError("inputs must specify exactly 2 inputs (e.g., ['motor', 'load'])")
         
-        # B1 is first input (typically motor), B2 is second input (typically load)
-        self.B1 = self.B[:, [0]]
-        self.B2 = self.B[:, [1]]
+        # Map input names to column indices: motor -> 0, load -> 1
+        input_name_to_col = {'motor': 0, 'load': 1}
+        
+        # Validate input names
+        valid_inputs = set(input_name_to_col.keys())
+        for inp in self.inputs_config:
+            if inp not in valid_inputs:
+                raise ValueError(f"Invalid input name '{inp}'. Must be one of {valid_inputs}")
+        
+        # Determine which columns are measured (B1) and unmeasured (B2)
+        measured_indices = [input_name_to_col[inp] for inp in self.inputs_config]
+        all_indices = list(input_name_to_col.values())
+        unmeasured_indices = [idx for idx in all_indices if idx not in measured_indices]
+        
+        # B1 contains all measured inputs (columns specified in inputs list)
+        # B2 contains all unmeasured inputs (columns not in inputs list)
+        if len(measured_indices) > 0:
+            self.B1 = self.B[:, measured_indices]
+        else:
+            raise ValueError("At least one input must be specified in measurement_config['inputs']")
+        
+        if len(unmeasured_indices) > 0:
+            self.B2 = self.B[:, unmeasured_indices]
+        else:
+            # If all inputs are measured, B2 should be empty (no unmeasured inputs to estimate)
+            # Create empty matrix with correct number of rows
+            self.B2 = np.zeros((self.B.shape[0], 0))
         
         # Placeholders for data
         self.y = None
@@ -216,7 +237,8 @@ class MHEEstimator(StateEstimator):
             Dictionary with keys:
             - 'torque_sensors': list of disk numbers for torque sensors (can be empty)
             - 'velocity_sensors': list of disk numbers for velocity sensors (can be empty)
-            - 'inputs': list of input names, e.g., ['motor', 'load']
+            - 'inputs': list of input names, e.g., ['motor'], ['load'], or ['motor', 'load']
+            Inputs specified in this list are measured (go to B1), others are unmeasured (go to B2).
             Note: Disk numbers are automatically converted to state indices with appropriate offsets.
         settings : dict
             Dictionary with keys:

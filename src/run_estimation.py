@@ -45,7 +45,8 @@ def run_estimation(
         Measurement configuration with keys:
         - 'torque_sensors': list of disk numbers (can be empty)
         - 'velocity_sensors': list of disk numbers (can be empty)
-        - 'inputs': list of input names, e.g., ['motor', 'load']
+        - 'inputs': list of input names, e.g., ['motor'], ['load'], or ['motor', 'load']
+        Inputs specified in this list are measured (go to B1), others are unmeasured (go to B2).
         Note: Disk numbers are automatically converted to state indices with appropriate offsets.
     estimator_settings : dict, optional
         Estimator-specific settings (MHE settings, etc.)
@@ -139,10 +140,22 @@ def run_estimation(
     
     y = np.hstack(y_list) if len(y_list) > 1 else y_list[0]
     
-    # Prepare input vector u1
-    u1 = data['inputs']['motor']
-    if u1.ndim == 1:
-        u1 = u1.reshape(1, -1)
+    # Prepare input vector u1 (measured inputs)
+    inputs_config = measurement_config.get('inputs', ['motor', 'load'])
+    u1_list = []
+    for inp_name in inputs_config:
+        if inp_name not in data['inputs']:
+            raise ValueError(f"Input '{inp_name}' not found in data. Available inputs: {list(data['inputs'].keys())}")
+        inp_data = data['inputs'][inp_name]
+        if inp_data.ndim == 1:
+            inp_data = inp_data.reshape(1, -1)
+        u1_list.append(inp_data)
+    
+    # Stack inputs horizontally: each input becomes a column
+    if len(u1_list) > 0:
+        u1 = np.vstack(u1_list)  # Shape: (n_inputs, N)
+    else:
+        raise ValueError("No inputs specified in measurement_config['inputs']")
     
     # Prepare truth data if available
     truth = {}
