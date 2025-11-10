@@ -20,30 +20,30 @@ from run_estimation import run_estimation
 if __name__ == "__main__":
     # Measurement configuration: velocity sensors at disk numbers 5, 6
     measurement_config = {
-        'torque_sensors': [],  # Torque sensors
-        'velocity_sensors': [24, 27],  # Disk numbers (will be converted to state indices)
+        'torque_sensors': [19],  # Torque sensors
+        'velocity_sensors': [23, 24],  # Disk numbers (will be converted to state indices)
         'inputs': ['motor']
     }
     
     # Estimator settings
     estimator_settings = {
         'horizon_length': 10,
-        'Q_v_scale': 0.25,
-        'Q_w_scale': 0.1,
-        'lambda_': 1.0
+        'Q_v_scale': 0.001,
+        'Q_w_scale': 0.01,
+        'lambda_': 0.001
     }
     
     # Initial state
     x_init = np.zeros(43)
 
     # Torque values
-    x_init[0:21] = 2.3 * np.ones(21)
-    x_init[11:16] = x_init[11:16] * 3
-    x_init[16:] = x_init[16:] * 4
+    #x_init[0:21] = 2.3 * np.ones(21)
+    #x_init[11:16] = x_init[11:16] * 3
+    #x_init[16:] = x_init[16:] * 3 * 4
 
-    x_init[21:] = 222 * np.ones(22)
-    x_init[33:39] = x_init[33:39] / 3
-    x_init[39:] = x_init[39:] / 4
+    #x_init[21:] = 222 * np.ones(22)
+    #x_init[33:39] = x_init[33:39] / 3
+    #x_init[39:] = x_init[39:] / 3 / 4
 
     # Data configuration
     data_config = {
@@ -52,9 +52,9 @@ if __name__ == "__main__":
         'measurement_config': measurement_config,
         'pid_params': {'kp': 0.2, 'ki': 0.1, 'kd': 0.0001},
         'speed_target': 200.0,
-        'actuator_noise_std': 0.0005,
+        'actuator_noise_std': 0.01,
         'process_noise_std': 0.001,
-        'measurement_noise_std': 0.01,
+        'measurement_noise_std': 0.05,
         'time': {'start': 0, 'end': 7, 'n_points': 2000}
     }
     
@@ -66,5 +66,4 @@ if __name__ == "__main__":
         measurement_config=measurement_config,
         estimator_settings=estimator_settings,
         output_path='mhe_results.npz',
-        plot=True
     )

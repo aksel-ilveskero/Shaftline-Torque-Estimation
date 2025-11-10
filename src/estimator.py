@@ -194,21 +194,6 @@ class StateEstimator(ABC):
         """
         pass
     
-    @abstractmethod
-    def plot_results(self, results_path: str, reference_data: Optional[dict] = None):
-        """
-        Plot estimation results.
-        
-        Parameters:
-        -----------
-        results_path : str
-            Path to saved results file
-        reference_data : dict, optional
-            Reference data for comparison plots
-        """
-        pass
-
-
 class MHEEstimator(StateEstimator):
     """
     Moving Horizon Estimation (MHE) implementation for state and input estimation.
@@ -490,11 +475,12 @@ class MHEEstimator(StateEstimator):
         if target_path.parent == Path('.'):
             target_path = Path('data') / target_path.name
         target_path.parent.mkdir(parents=True, exist_ok=True)
-
+        
         np.savez(
             str(target_path),
             xhat=results['xhat'],
             uhat=results['uhat'],
+            sim_data=results['sim_data'],
             times=np.array(results['times']),
             total_time=results['total_time'],
             t=self.t,
@@ -507,32 +493,4 @@ class MHEEstimator(StateEstimator):
             sensor_types=np.array(self.sensor_metadata['sensor_types']),
             sensor_indices=np.array(self.sensor_metadata['sensor_indices']),
         )
-
-    def plot_results(self, results_path: str, reference_data: Optional[dict] = None):
-        """
-        Plot estimation results from saved file.
-        
-        This method calls the standalone plotting function. For direct plotting
-        without an estimator instance, use plot_results.plot_results() directly.
-        
-        Parameters:
-        -----------
-        results_path : str
-            Path to saved results file (.npz). If relative, loads from data/
-        reference_data : dict, optional
-            Reference data for comparison with keys:
-            - 'torque': measured torque data (N x n_torque_sensors)
-            - 'velocity': measured velocity data (N x n_velocity_sensors)
-            - 'prop_torque': propeller/load torque (N,)
-            - 'u1_noisy': noisy motor torque input (N,) or (1 x N)
-        """
-        from plot_results import plot_results as plot_func
-        
-        # Add u1_noisy from truth if available
-        if reference_data is None:
-            reference_data = {}
-        if "u1_noisy" in self.truth:
-            reference_data['u1_noisy'] = self.truth['u1_noisy']
-        
-        plot_func(results_path, reference_data)
 

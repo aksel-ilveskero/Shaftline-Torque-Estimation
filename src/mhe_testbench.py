@@ -23,7 +23,7 @@ if __name__ == "__main__":
     # Measurement configuration: velocity sensors at disk numbers 5, 6
     measurement_config = {
         'torque_sensors': [],  # Torque sensors
-        'velocity_sensors': [6, 7],  # Disk numbers (will be converted to state indices)
+        'velocity_sensors': [26, 27],  # Disk numbers (will be converted to state indices)
         'inputs': ['motor']
     }
     
@@ -41,11 +41,11 @@ if __name__ == "__main__":
     # Torque values
     x_init[0:21] = 2.3 * np.ones(21)
     x_init[11:16] = x_init[11:16] * 3
-    x_init[16:] = x_init[16:] * 4
+    x_init[16:] = x_init[16:] * 3 * 4
 
     x_init[21:] = 222 * np.ones(22)
     x_init[33:39] = x_init[33:39] / 3
-    x_init[39:] = x_init[39:] / 4
+    x_init[39:] = x_init[39:] / 3 / 4
 
 
     # Data configuration
@@ -64,7 +64,6 @@ if __name__ == "__main__":
         measurement_config=measurement_config,
         estimator_settings=estimator_settings,
         output_path='mhe_results.npz',
-        plot=True
     )
 
 

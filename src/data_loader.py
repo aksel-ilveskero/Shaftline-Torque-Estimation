@@ -234,7 +234,7 @@ def get_load_case(load_case: str, N: int) -> np.ndarray:
     if load_case == 'step':
         # Step loads: multiple steps throughout simulation
         step_points = [int(N/4), int(N/2), int(3*N/4)]
-        vals = [0.1, 1.3, 0.1, 1.3]
+        vals = [-1, -5, -1, -5]
         prev = 0
         for sp, v in zip(step_points + [N], vals):
             u2[prev:sp] = v

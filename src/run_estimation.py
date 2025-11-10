@@ -18,7 +18,7 @@ from ot_assembly import test_bench
 from estimator import MHEEstimator
 from data_loader import load_csv, load_feather, simulate_data
 from utils import minimize
-from plot_results import plot_results as plot_estimation_results
+
 
 
 def run_estimation(
@@ -28,7 +28,6 @@ def run_estimation(
     measurement_config: Optional[Dict] = None,
     estimator_settings: Optional[Dict] = None,
     output_path: str = 'estimation_results.npz',
-    plot: bool = True
 ) -> Dict:
     """
     Run complete state estimation workflow.
@@ -52,8 +51,6 @@ def run_estimation(
         Estimator-specific settings (MHE settings, etc.)
     output_path : str, optional
         Path to save results (default: 'estimation_results.npz')
-    plot : bool, optional
-        Whether to plot results (default: True)
         
     Returns:
     --------
@@ -194,26 +191,13 @@ def run_estimation(
     
     results = estimator.estimate(x_init=x_init)
     
-    # Step 6: Save and plot results
-    print("\nStep 6: Saving and plotting results...")
+    # Add simulation data to results as "sim_data" for downstream use
+    results["sim_data"] = data['reference']
+
+    # Step 6: Save results
+    print("\nStep 6: Saving results...")
     estimator.save_results(output_path, results)
     print(f"  Results saved to: {output_path}")
-    
-    if plot:
-        # Prepare reference data for plotting
-        reference_data = None
-        if 'reference' in data:
-            ref = data['reference']
-            reference_data = {}
-            if 'torque' in ref:
-                reference_data['torque'] = ref['torque']
-            if 'velocity' in ref:
-                reference_data['velocity'] = ref['velocity']
-            if 'prop_torque' in ref:
-                reference_data['prop_torque'] = ref['prop_torque']
-        
-        # Use standalone plotting function (can also use estimator.plot_results())
-        plot_estimation_results(output_path, reference_data=reference_data)
     
     return {
         'estimator': estimator,
@@ -266,7 +250,6 @@ if __name__ == "__main__":
         data_config=data_config,
         measurement_config=measurement_config,
         estimator_settings=estimator_settings,
-        output_path='example_results.npz',
-        plot=True
+        output_path='example_results.npz'
     )
 
