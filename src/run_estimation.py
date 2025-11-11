@@ -16,7 +16,8 @@ import numpy as np
 
 from ot_assembly import test_bench
 from estimator import MHEEstimator
-from data_loader import load_csv, load_feather, simulate_data
+from data_loader import load_csv, load_feather
+from simulation import simulate_data
 from utils import minimize
 
 
