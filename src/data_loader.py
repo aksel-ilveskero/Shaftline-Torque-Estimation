@@ -242,8 +242,8 @@ def get_load_case(load_case: str, N: int) -> np.ndarray:
     elif load_case == 'impulse':
         # Impulse loads: short duration impulses
         impulse_times = [int(N/4), int(N/2), int(3*N/4)]
-        impulse_duration = int(N * 0.01)  # 1% of simulation time
-        impulse_magnitude = 2.0
+        impulse_duration = int(N * 0.03)
+        impulse_magnitude = -6.0
         for imp_time in impulse_times:
             end_idx = min(imp_time + impulse_duration, N)
             u2[imp_time:end_idx] = impulse_magnitude

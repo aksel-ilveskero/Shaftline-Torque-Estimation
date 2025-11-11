@@ -20,17 +20,17 @@ from run_estimation import run_estimation
 if __name__ == "__main__":
     # Measurement configuration: velocity sensors at disk numbers 5, 6
     measurement_config = {
-        'torque_sensors': [19],  # Torque sensors
-        'velocity_sensors': [23, 24],  # Disk numbers (will be converted to state indices)
+        'torque_sensors': [],  # Torque sensors
+        'velocity_sensors': [26, 27],  # Disk numbers (will be converted to state indices)
         'inputs': ['motor']
     }
     
     # Estimator settings
     estimator_settings = {
         'horizon_length': 10,
-        'Q_v_scale': 0.001,
-        'Q_w_scale': 0.01,
-        'lambda_': 0.001
+        'Q_v_scale': 0.01,
+        'Q_w_scale': 0.05,
+        'lambda_': 1000
     }
     
     # Initial state
@@ -48,13 +48,13 @@ if __name__ == "__main__":
     # Data configuration
     data_config = {
         'initial_state': x_init,
-        'load_case': 'step',
+        'load_case': 'impulse',
         'measurement_config': measurement_config,
         'pid_params': {'kp': 0.2, 'ki': 0.1, 'kd': 0.0001},
         'speed_target': 200.0,
         'actuator_noise_std': 0.01,
         'process_noise_std': 0.001,
-        'measurement_noise_std': 0.05,
+        'measurement_noise_std': 0.001,
         'time': {'start': 0, 'end': 7, 'n_points': 2000}
     }
     

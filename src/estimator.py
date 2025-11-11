@@ -101,23 +101,29 @@ class StateEstimator(ABC):
             if inp not in valid_inputs:
                 raise ValueError(f"Invalid input name '{inp}'. Must be one of {valid_inputs}")
         
-        # Determine which columns are measured (B1) and unmeasured (B2)
-        measured_indices = [input_name_to_col[inp] for inp in self.inputs_config]
-        all_indices = list(input_name_to_col.values())
-        unmeasured_indices = [idx for idx in all_indices if idx not in measured_indices]
-        
-        # B1 contains all measured inputs (columns specified in inputs list)
-        # B2 contains all unmeasured inputs (columns not in inputs list)
-        if len(measured_indices) > 0:
-            self.B1 = self.B[:, measured_indices]
+        # Determine B1 (measured inputs) and B2 (unmeasured inputs) based on presence of 'motor' and 'load' in inputs
+        measured_cols = []
+        unmeasured_cols = []
+
+        if 'motor' in self.inputs_config:
+            measured_cols.append(0)
         else:
-            raise ValueError("At least one input must be specified in measurement_config['inputs']")
-        
-        if len(unmeasured_indices) > 0:
-            self.B2 = self.B[:, unmeasured_indices]
+            unmeasured_cols.append(0)
+        if 'load' in self.inputs_config:
+            measured_cols.append(self.B.shape[1] - 1)
         else:
-            # If all inputs are measured, B2 should be empty (no unmeasured inputs to estimate)
-            # Create empty matrix with correct number of rows
+            unmeasured_cols.append(self.B.shape[1] - 1)
+
+        if len(measured_cols) > 0:
+            self.B1 = self.B[:, measured_cols]
+        else:
+            # No measured inputs specified in input config
+            self.B1 = np.zeros((self.B.shape[0], 0))
+
+        if len(unmeasured_cols) > 0:
+            self.B2 = self.B[:, unmeasured_cols]
+        else:
+            # No unmeasured inputs to estimate
             self.B2 = np.zeros((self.B.shape[0], 0))
         
         # Placeholders for data
@@ -296,7 +302,7 @@ class MHEEstimator(StateEstimator):
                 constraints.append(delta_var[:, k] == u2_var[:, k - 1] - 2 * u2_var[:, k] + u2_var[:, k + 1])
 
         problem = cp.Problem(cp.Minimize(objective_expr), constraints)
-        problem.solve()
+        sol = problem.solve()
 
         end_time = time.time()
         return x_var.value, u2_var.value, end_time - start_time
