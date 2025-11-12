@@ -49,6 +49,9 @@ class StateEstimator(ABC):
         # First: Get continuous-time state-space matrices from assembly and minimize them
         # This also populates assembly.X needed for minimal form transformation
         A_full, B_full, _, _ = assembly.state_space()
+
+        # Multiply last column of B_full by -1
+        B_full[:, -1] *= -1
         
         # Transform to minimal form using minimize function
         A_c = minimize(A_full, assembly, 'state')  # X @ A @ X_inv
@@ -459,7 +462,7 @@ class MHEEstimator(StateEstimator):
             'total_time': total_time
         }
 
-    def save_results(self, output_path: str, results: Optional[dict] = None):
+    def save_results(self, output_path: str, results: Optional[dict] = None, reference_data: Optional[dict] = None):
         """
         Save estimation results to file.
         
@@ -469,6 +472,8 @@ class MHEEstimator(StateEstimator):
             Path to save results (.npz file). If relative path, saves to data/
         results : dict, optional
             Results dictionary from estimate(). If None, calls estimate() first.
+        reference_data : dict, optional
+            Reference data dictionary from load_data(). If None, no reference data is saved.
         """
         if results is None:
             results = self.estimate()
@@ -486,7 +491,7 @@ class MHEEstimator(StateEstimator):
             str(target_path),
             xhat=results['xhat'],
             uhat=results['uhat'],
-            sim_data=results['sim_data'],
+            reference_data=reference_data,
             times=np.array(results['times']),
             total_time=results['total_time'],
             t=self.t,

@@ -88,7 +88,7 @@ def get_load_case(load_case: str, N: int) -> np.ndarray:
     if load_case == "step":
         # Step loads: multiple steps throughout simulation
         step_points = [int(N / 4), int(N / 2), int(3 * N / 4)]
-        vals = [-1, -5, -1, -5]
+        vals = [1, 5, 1, 5]
         prev = 0
         for sp, v in zip(step_points + [N], vals):
             u2[prev:sp] = v
@@ -97,7 +97,7 @@ def get_load_case(load_case: str, N: int) -> np.ndarray:
         # Impulse loads: short duration impulses
         impulse_times = [int(N / 4), int(N / 2), int(3 * N / 4)]
         impulse_duration = int(N * 0.03)
-        impulse_magnitude = -6.0
+        impulse_magnitude = 6.0
         for imp_time in impulse_times:
             end_idx = min(imp_time + impulse_duration, N)
             u2[imp_time:end_idx] = impulse_magnitude
@@ -309,9 +309,9 @@ def simulate_data(assembly, config: Dict) -> Dict:
             "load": u2,
         },
         "reference": {
-            "x": xout,
+            "xout_rows": np.linspace(0, n_states-1, n_states).astype(int),
+            "xout": xout,
             "u2": u2,
-            "u1_noisy": u1,
         },
     }
 

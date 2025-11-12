@@ -22,28 +22,28 @@ if __name__ == "__main__":
     
     # Measurement configuration: velocity sensors at disk numbers 5, 6
     measurement_config = {
-        'torque_sensors': [],  # Torque sensors
-        'velocity_sensors': [26, 27],  # Disk numbers (will be converted to state indices)
-        'inputs': ['motor']
+        'torque_sensors': [8, 18],  # Torque sensors
+        'velocity_sensors': [26, 27],  # Velocity sensors
+        'inputs': ['motor'],  # Inputs
     }
     
     # Estimator settings
     estimator_settings = {
-        'horizon_length': 10,
-        'Q_v_scale': 0.25,
-        'Q_w_scale': 0.1,
-        'lambda_': 1.0
+        'horizon_length': 8,
+        'Q_v_scale': 0.05,
+        'Q_w_scale': 0.0025,
+        'lambda_': 1
     }
     
     # Initial state
     x_init = np.zeros(43)
 
     # Torque values
-    x_init[0:21] = 2.3 * np.ones(21)
+    x_init[0:21] = 1.38 * np.ones(21)
     x_init[11:16] = x_init[11:16] * 3
     x_init[16:] = x_init[16:] * 3 * 4
 
-    x_init[21:] = 222 * np.ones(22)
+    x_init[21:] = 210 * np.ones(22)
     x_init[33:39] = x_init[33:39] / 3
     x_init[39:] = x_init[39:] / 3 / 4
 
@@ -52,8 +52,8 @@ if __name__ == "__main__":
     data_config = {
         'initial_state': x_init,
         'path': 'data/ice_aligned.feather',
-        'start_idx': 6000,
-        'end_idx': 8000
+        'start_idx': 6500,
+        'end_idx': 8500
     }
     
     # Run estimation using unified workflow

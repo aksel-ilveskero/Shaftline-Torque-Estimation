@@ -21,16 +21,16 @@ if __name__ == "__main__":
     # Measurement configuration: velocity sensors at disk numbers 5, 6
     measurement_config = {
         'torque_sensors': [],  # Torque sensors
-        'velocity_sensors': [26, 27],  # Disk numbers (will be converted to state indices)
-        'inputs': ['motor']
+        'velocity_sensors': [26, 27],  # Velocity sensors
+        'inputs': ['motor'],  # Inputs
     }
     
     # Estimator settings
     estimator_settings = {
-        'horizon_length': 10,
+        'horizon_length': 8,
         'Q_v_scale': 0.01,
-        'Q_w_scale': 0.05,
-        'lambda_': 1000
+        'Q_w_scale': 0.15,
+        'lambda_': 10
     }
     
     # Initial state
@@ -53,8 +53,8 @@ if __name__ == "__main__":
         'pid_params': {'kp': 0.2, 'ki': 0.1, 'kd': 0.0001},
         'speed_target': 200.0,
         'actuator_noise_std': 0.01,
-        'process_noise_std': 0.001,
-        'measurement_noise_std': 0.001,
+        'process_noise_std': 0.01,
+        'measurement_noise_std': 0.2,
         'time': {'start': 0, 'end': 7, 'n_points': 2000}
     }
     

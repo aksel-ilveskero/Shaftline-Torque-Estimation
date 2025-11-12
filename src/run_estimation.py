@@ -193,11 +193,13 @@ def run_estimation(
     results = estimator.estimate(x_init=x_init)
     
     # Add simulation data to results as "sim_data" for downstream use
-    results["sim_data"] = data['reference']
+    reference_data = data['reference']
+    if reference_data is None:
+        print("  Warning: no reference data found")
 
     # Step 6: Save results
     print("\nStep 6: Saving results...")
-    estimator.save_results(output_path, results)
+    estimator.save_results(output_path, results, reference_data=reference_data)
     print(f"  Results saved to: {output_path}")
     
     return {

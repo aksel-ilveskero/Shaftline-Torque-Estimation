@@ -71,11 +71,11 @@ def load_csv(csv_path: str | Path, start_idx: int = 14500, end_idx: int = 16000)
             'motor': motor_torque,
             'load': prop_torque
         },
-        'reference': {
-            'torque': np.column_stack([torque1, torque2]),
-            'velocity': np.column_stack([enc1_velocity, enc2_velocity]),
-            'prop_torque': prop_torque
-        }
+        "reference": {
+            "xout_rows": [8,18,26,27],
+            "xout": np.column_stack([torque1, torque2, enc1_velocity, enc2_velocity]),
+            "u2": prop_torque,
+        },
     }
 
 
@@ -150,10 +150,10 @@ def load_feather(feather_path: str | Path = 'data/ice_aligned.feather',
             'motor': u_m,
             'load': u_p
         },
-        'reference': {
-            'torque': np.column_stack([t1, t2]),
-            'velocity': np.column_stack([e1, e2]),
-            'prop_torque': u_p
-        }
+        "reference": {
+            "xout_rows": [8,18,26,27],
+            "xout": np.column_stack([t1, t2, e1, e2]),
+            "u2": u_p,
+        },
     }
 
