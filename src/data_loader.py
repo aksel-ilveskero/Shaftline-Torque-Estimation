@@ -7,9 +7,57 @@ estimation framework.
 """
 
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, Optional, Sequence
 import numpy as np
 import pandas as pd
+
+
+def plot_series(
+    data_series: Sequence[np.ndarray],
+    titles: Sequence[str],
+    xlabel: str = "Sample index",
+    ylabel: str = "",
+    figsize: Optional[tuple[float, float]] = None,
+) -> None:
+    """
+    Plot a collection of time-series on individual subplots.
+
+    Parameters
+    ----------
+    data_series : sequence of np.ndarray
+        Iterable of one-dimensional arrays to plot.
+    titles : sequence of str
+        Titles for each subplot. Must match the length of `data_series`.
+    xlabel : str, optional
+        Label for the x-axis. Defaults to "Sample index".
+    ylabel : str, optional
+        Shared label applied to all subplots' y-axes. Defaults to empty string.
+    figsize : tuple, optional
+        Figure size passed to matplotlib.
+    """
+    if not data_series:
+        return
+
+    if len(data_series) != len(titles):
+        raise ValueError("`data_series` and `titles` must have the same length.")
+
+    import matplotlib.pyplot as plt
+
+    n_plots = len(data_series)
+    fig, axes = plt.subplots(n_plots, 1, figsize=figsize or (8, 2.5 * n_plots), squeeze=False, sharex=True)
+
+    axes = axes.flatten()
+
+    for ax, series, title in zip(axes, data_series, titles):
+        ax.plot(series)
+        ax.set_title(title)
+        if ylabel:
+            ax.set_ylabel(ylabel)
+        ax.set_xlabel(xlabel)
+        ax.grid(True)
+
+    fig.tight_layout()
+    plt.show()
 
 
 def load_csv(csv_path: str | Path, start_idx: int = 14500, end_idx: int = 16000) -> Dict:
@@ -61,6 +109,12 @@ def load_csv(csv_path: str | Path, start_idx: int = 14500, end_idx: int = 16000)
     enc1_velocity = np.gradient(np.unwrap(enc1_angle), enc1_time)
     enc2_velocity = np.gradient(np.unwrap(enc2_angle), enc2_time)
 
+    plot_series(
+        [motor_torque, torque1, prop_torque],
+        ["Motor Torque", "Shaft Torque 1", "Propeller Torque"],
+        ylabel="Magnitude",
+    )
+    
     return {
         'time': time,
         'measurements': {
@@ -139,6 +193,16 @@ def load_feather(feather_path: str | Path = 'data/ice_aligned.feather',
     t2 = sample_slice["T2"].to_numpy()  # torque measurement
     u_p = sample_slice["u_p"].to_numpy()  # load torque input
     u_m = sample_slice["u_m"].to_numpy()  # motor torque input
+
+    plot_series(
+        [u_m, e1, t1],
+        [
+            "Motor Torque Input",
+            "Encoder 1 Velocity",
+            "Torque Sensor 1",
+        ],
+        ylabel="Magnitude",
+    )
 
     return {
         'time': time,

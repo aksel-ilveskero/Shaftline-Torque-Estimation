@@ -21,7 +21,7 @@ if __name__ == "__main__":
     # Measurement configuration: velocity sensors at disk numbers 5, 6
     measurement_config = {
         'torque_sensors': [],  # Torque sensors
-        'velocity_sensors': [26, 27],  # Velocity sensors
+        'velocity_sensors': [22],  # Velocity sensors
         'inputs': ['motor'],  # Inputs
     }
     
@@ -48,7 +48,7 @@ if __name__ == "__main__":
     # Data configuration
     data_config = {
         'initial_state': x_init,
-        'load_case': 'impulse',
+        'load_case': 'sine',
         'measurement_config': measurement_config,
         'pid_params': {'kp': 0.2, 'ki': 0.1, 'kd': 0.0001},
         'speed_target': 200.0,

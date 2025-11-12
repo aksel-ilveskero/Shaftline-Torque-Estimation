@@ -13,25 +13,21 @@ import numpy as np
 np.seterr(divide='ignore', invalid='ignore')
 
 from ot_assembly import test_bench
-from data_loader import load_csv, load_feather
 from run_estimation import run_estimation
 
 if __name__ == "__main__":
-    # Example: Load feather data and run estimation
-    data = load_feather()
-    
     # Measurement configuration: velocity sensors at disk numbers 5, 6
     measurement_config = {
-        'torque_sensors': [8, 18],  # Torque sensors
+        'torque_sensors': [],  # Torque sensors
         'velocity_sensors': [26, 27],  # Velocity sensors
         'inputs': ['motor'],  # Inputs
     }
     
     # Estimator settings
     estimator_settings = {
-        'horizon_length': 8,
-        'Q_v_scale': 0.05,
-        'Q_w_scale': 0.0025,
+        'horizon_length': 15,
+        'Q_v_scale': 0.1,
+        'Q_w_scale': 0.5,
         'lambda_': 1
     }
     
@@ -39,7 +35,7 @@ if __name__ == "__main__":
     x_init = np.zeros(43)
 
     # Torque values
-    x_init[0:21] = 1.38 * np.ones(21)
+    x_init[0:21] = 1.5 * np.ones(21)
     x_init[11:16] = x_init[11:16] * 3
     x_init[16:] = x_init[16:] * 3 * 4
 
@@ -51,7 +47,7 @@ if __name__ == "__main__":
     # Data configuration
     data_config = {
         'initial_state': x_init,
-        'path': 'data/ice_aligned.feather',
+        'path': 'data/impulse_aligned.feather',
         'start_idx': 6500,
         'end_idx': 8500
     }

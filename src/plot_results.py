@@ -206,5 +206,5 @@ def plot_results(
 
 
 if __name__ == "__main__":
-    plot_results('data/mhe_results.npz', state_indices=[8,18,26,35])
+    plot_results('data/mhe_results.npz', state_indices=[8,18,26,40])
 

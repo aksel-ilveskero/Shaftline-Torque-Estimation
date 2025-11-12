@@ -6,7 +6,7 @@ previously embedded in `data_loader.py`. The functionality is separated out
 to keep loading utilities distinct from simulation routines.
 """
 
-from typing import Dict
+from typing import Dict, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -62,16 +62,18 @@ class PIDController:
         return output
 
 
-def get_load_case(load_case: str, N: int) -> np.ndarray:
+def get_load_case(load_case: str, t: np.ndarray, params: Optional[Dict] = None) -> np.ndarray:
     """
     Generate load torque sequence based on load case type.
 
     Parameters
     ----------
     load_case : str
-        Type of load case: 'step' or 'impulse'
-    N : int
-        Number of time points in the simulation
+        Type of load case: 'step', 'impulse', or 'sine'
+    t : ndarray
+        Time vector of length N
+    params : dict, optional
+        Additional parameters for the load case (e.g., amplitude, frequency)
 
     Returns
     -------
@@ -83,6 +85,8 @@ def get_load_case(load_case: str, N: int) -> np.ndarray:
     ValueError
         If load_case is not recognized
     """
+    params = params or {}
+    N = len(t)
     u2 = np.zeros(N)
 
     if load_case == "step":
@@ -101,8 +105,21 @@ def get_load_case(load_case: str, N: int) -> np.ndarray:
         for imp_time in impulse_times:
             end_idx = min(imp_time + impulse_duration, N)
             u2[imp_time:end_idx] = impulse_magnitude
+    elif load_case == "sine":
+        amplitude = params.get("amplitude", 5.0)
+        frequency = params.get("frequency", 1.0)
+        phase = params.get("phase", 0.0)
+        bias = params.get("bias", 0.0)
+
+        if frequency < 0:
+            raise ValueError("Sine load_case requires non-negative 'frequency'.")
+        if amplitude < 0:
+            raise ValueError("Sine load_case requires non-negative 'amplitude'.")
+
+        time_shifted = t - t[0]
+        u2 = bias + amplitude * np.sin(2 * np.pi * frequency * time_shifted + phase)
     else:
-        raise ValueError(f"Unknown load_case '{load_case}'. Supported cases: 'step', 'impulse'")
+        raise ValueError(f"Unknown load_case '{load_case}'. Supported cases: 'step', 'impulse', 'sine'")
 
     return u2
 
@@ -118,7 +135,7 @@ def simulate_data(assembly, config: Dict) -> Dict:
     config : dict
         Simulation configuration with keys:
         - 'time': time vector or dict with 'start', 'end', 'n_points'
-        - 'load_case': str, required - 'step' or 'impulse' for load torque pattern
+        - 'load_case': str, required - 'step', 'impulse', or 'sine'
         - 'process_noise_std': float (default 0.01)
         - 'measurement_noise_std': float (default 0.1)
         - 'actuator_noise_std': float (default 0.05)
@@ -126,6 +143,7 @@ def simulate_data(assembly, config: Dict) -> Dict:
         - 'measurement_config': dict with sensor locations (required)
         - 'pid_params': dict with 'kp', 'ki', 'kd' (optional, defaults provided)
         - 'speed_target': float (default 200.0 rad/s)
+        - 'load_case_params': dict (optional) parameters for selected load case
 
     Returns
     -------
@@ -140,16 +158,19 @@ def simulate_data(assembly, config: Dict) -> Dict:
 
     # Check required parameters
     if "load_case" not in config:
-        raise ValueError("'load_case' must be specified in config. Use 'step' or 'impulse'.")
+        raise ValueError("'load_case' must be specified in config. Use 'step', 'impulse', or 'sine'.")
     if "measurement_config" not in config:
         raise ValueError("measurement_config must be provided for simulation")
 
     load_case = config["load_case"]
-    if load_case not in ["step", "impulse"]:
-        raise ValueError(f"load_case must be 'step' or 'impulse', got '{load_case}'")
+    if load_case not in ["step", "impulse", "sine"]:
+        raise ValueError(f"load_case must be 'step', 'impulse', or 'sine', got '{load_case}'")
 
     # Get state-space matrices
     A_full, B_full, _, _ = assembly.state_space()
+
+    # Multiply last column of B_full by -1
+    B_full[:, -1] *= -1
 
     # Transform to minimal form using minimize function
     A_c = minimize(A_full, assembly, "state")  # X @ A @ X_inv
@@ -215,7 +236,7 @@ def simulate_data(assembly, config: Dict) -> Dict:
     velocity_state_idx = (n_states + 1) // 2
 
     # Generate load torque (u2) based on load_case
-    u2 = get_load_case(load_case, N)
+    u2 = get_load_case(load_case, t, config.get("load_case_params"))
 
     # Simulation arrays
     xout = np.zeros((N, n_states))
