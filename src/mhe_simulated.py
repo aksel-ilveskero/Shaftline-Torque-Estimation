@@ -16,21 +16,29 @@ import numpy as np
 
 from ot_assembly import test_bench
 from run_estimation import run_estimation
+import matplotlib.pyplot as plt
+import scienceplots
+
+plt.style.use(['science','ieee'])
+plt.rcParams.update({
+    "figure.dpi": 100,
+})
+plt.rcParams.update({'font.size': 12})
 
 if __name__ == "__main__":
     # Measurement configuration: velocity sensors at disk numbers 5, 6
     measurement_config = {
         'torque_sensors': [],  # Torque sensors
-        'velocity_sensors': [22],  # Velocity sensors
+        'velocity_sensors': [21],  # Velocity sensors
         'inputs': ['motor'],  # Inputs
     }
     
     # Estimator settings
     estimator_settings = {
         'horizon_length': 8,
-        'Q_v_scale': 0.01,
-        'Q_w_scale': 0.15,
-        'lambda_': 10
+        'Q_v_scale': 0.07,
+        'Q_w_scale': 0.25,
+        'lambda_': 1000
     }
     
     # Initial state
@@ -48,12 +56,12 @@ if __name__ == "__main__":
     # Data configuration
     data_config = {
         'initial_state': x_init,
-        'load_case': 'sine',
+        'load_case': 'impulse',
         'measurement_config': measurement_config,
         'pid_params': {'kp': 0.2, 'ki': 0.1, 'kd': 0.0001},
         'speed_target': 200.0,
-        'actuator_noise_std': 0.01,
-        'process_noise_std': 0.01,
+        'actuator_noise_std': 0.1,
+        'process_noise_std': 0.05,
         'measurement_noise_std': 0.2,
         'time': {'start': 0, 'end': 7, 'n_points': 2000}
     }

@@ -20,15 +20,18 @@ def plot_results(
     Load and plot estimation results from saved file.
     
     This function can be used independently of the estimator object to plot
-    results from saved .npz files.
+    results from saved .npz files. Plots in a 2x2 grid:
+    - Top left: Driving Motor Torque (u1)
+    - Top right: Load Motor Torque (u2, estimated and optionally true)
+    - Bottom left: Driving Motor Velocity (first velocity state)
+    - Bottom right: Load Motor Velocity (last velocity state)
     
     Parameters:
     -----------
     results_path : str
         Path to saved results file (.npz). If relative, loads from data/
     state_indices : sequence of int, optional
-        State indices to plot. Defaults to indices corresponding to measured sensors
-        (data['sensor_indices']) when available, otherwise plots all states.
+        Deprecated parameter, kept for backward compatibility. Not used.
     """
     # Resolve input path from data/ by default if only filename provided
     input_path = Path(results_path)
@@ -63,55 +66,23 @@ def plot_results(
     y = data["y"]
     u1 = data["u1"]
     
-    # Load sensor metadata
-    # Sensor metadata is optional because logged data can come from different configurations
-    torque_sensors = data.get("torque_sensors")
-    velocity_sensors = data.get("velocity_sensors")
-    torque_sensor_state_indices = data.get("torque_sensor_state_indices")
-    velocity_sensor_state_indices = data.get("velocity_sensor_state_indices")
-    sensor_types = data.get("sensor_types", [])
-    sensor_indices = data.get("sensor_indices", [])
-
-    # Normalize to lists for consistent handling
-    def _to_int_list(value):
-        if value is None:
-            return []
-        arr = np.asarray(value).astype(int)
-        return arr.tolist()
-
-    torque_sensors = _to_int_list(torque_sensors)
-    velocity_sensors = _to_int_list(velocity_sensors)
-    torque_sensor_state_indices = _to_int_list(torque_sensor_state_indices)
-    velocity_sensor_state_indices = _to_int_list(velocity_sensor_state_indices)
-    sensor_types = list(np.asarray(sensor_types).astype(str)) if len(sensor_types) > 0 else []
-    sensor_indices = _to_int_list(sensor_indices)
-    
-    # Determine which states to plot
-    if state_indices is None:
-        if len(sensor_indices) > 0:
-            # Use order provided by sensor indices (may have duplicates, keep first occurrence)
-            seen = set()
-            state_indices_to_plot = []
-            for idx in sensor_indices:
-                if idx not in seen:
-                    state_indices_to_plot.append(int(idx))
-                    seen.add(int(idx))
+    # Skip first 250 and last 50 data points for all plots
+    skip_start = 250
+    skip_end = 50
+    if len(t) > skip_start + skip_end:
+        t = t[skip_start:-skip_end]
+        y = y[skip_start:-skip_end, :]
+        if u1.ndim == 1:
+            u1 = u1[skip_start:-skip_end]
         else:
-            state_indices_to_plot = list(range(xhat.shape[0]))
-    else:
-        state_indices_to_plot = [int(idx) for idx in state_indices]
-
-    if len(state_indices_to_plot) == 0:
-        raise ValueError("No state indices provided to plot.")
-
-    # Maps for quick lookup of sensor indices by state index
-    sensor_index_map = {}
-    for meas_idx, state_idx in enumerate(sensor_indices):
-        sensor_index_map.setdefault(int(state_idx), []).append(meas_idx)
-
-    torque_index_map = {int(idx): pos for pos, idx in enumerate(torque_sensor_state_indices)}
-    velocity_index_map = {int(idx): pos for pos, idx in enumerate(velocity_sensor_state_indices)}
-
+            u1 = u1[:, skip_start:-skip_end]
+        xhat = xhat[:, skip_start:-skip_end]
+        uhat = uhat[:, skip_start:-skip_end]
+        if ref_data is not None:
+            ref_data = ref_data[skip_start:-skip_end, :]
+        if ref_u2 is not None:
+            ref_u2 = ref_u2[skip_start:-skip_end]
+    
     # Determine state categories from minimal-form ordering
     n_states = xhat.shape[0]
     if n_states % 2 == 0:
@@ -119,92 +90,112 @@ def plot_results(
     else:
         torque_state_boundary = (n_states - 1) // 2
 
-    # Determine number of plots needed
-    n_plots = 1 + len(state_indices_to_plot)
-    
-    fig, axs = plt.subplots(n_plots, figsize=(10, 3*n_plots))
-    if n_plots == 1:
-        axs = [axs]
-    
-    plot_idx = 0
-    
-    # Plot inputs
+    # Determine first and last velocity state indices
+    first_velocity_idx = torque_state_boundary
+    last_velocity_idx = n_states - 1
+
+    # Create 2x2 grid as in simulate_data
+    fig, axes = plt.subplots(2, 2, figsize=(9, 9))
+
+    # Upper row: Input torques
+    # Top left: u1 (Driving Motor Torque)
     if u1.ndim == 1:
-        axs[plot_idx].plot(t, u1, 'k', alpha=0.5, linewidth=2, label='input u1')
+        axes[0, 0].plot(t, u1, "r", linewidth=1.5, label='simulated')
     else:
-        axs[plot_idx].plot(t, u1[0, :], 'k', alpha=0.5, linewidth=2, label='input u1')
-    
+        axes[0, 0].plot(t, u1[0, :], "r", linewidth=1.5, label='simulated')
+    axes[0, 0].set_xlabel("Time (s)")
+    axes[0, 0].set_ylabel("Torque (Nm)")
+    axes[0, 0].set_title("Driving Motor Torque")
+    axes[0, 0].text(0.02, 1.06, "a)", transform=axes[0, 0].transAxes, fontsize=12, verticalalignment='top')
+    axes[0, 0].grid(True, alpha=0.3)
+    axes[0, 0].legend()
+
+    # Top right: u2 (Load Motor Torque)
     if ref_u2 is not None:
-        axs[plot_idx].plot(t, ref_u2, alpha=0.5, linewidth=2, label='true input u2')
+        axes[0, 1].plot(t, ref_u2, "r", alpha=0.7, linewidth=1.5, label='simulated')
+    axes[0, 1].plot(t, uhat[0, :], "C0", alpha=0.8, linewidth=1.2, label='estimated')
+    axes[0, 1].set_xlabel("Time (s)")
+    axes[0, 1].set_ylabel("Torque (Nm)")
+    axes[0, 1].set_title("Load Motor Torque")
+    axes[0, 1].text(0.02, 1.06, "b)", transform=axes[0, 1].transAxes, fontsize=12, verticalalignment='top')
+    axes[0, 1].grid(True, alpha=0.3)
+    axes[0, 1].legend()
 
-    axs[plot_idx].plot(t, uhat[0, :], alpha=0.5, color='r', label='estimated input u2')
+    # Lower row: First and last velocity states
+    # Bottom left: First velocity state (Driving Motor Velocity)
+    #axes[1, 0].plot(t, xhat[first_velocity_idx, :], "r", linewidth=1.5, label='estimated')
     
-    axs[plot_idx].set_ylabel('Torque (Nm)')
-    axs[plot_idx].legend()
-    axs[plot_idx].set_title('Inputs')
-    plot_idx += 1
+    # Plot true state if available
+    ref_pos = ref_row_to_idx.get(int(first_velocity_idx))
+    if ref_pos is not None and ref_data is not None:
+        true_trajectory = ref_data[:, ref_pos]
+        if true_trajectory.ndim == 1 and true_trajectory.size == t.size:
+            axes[1, 0].plot(t, true_trajectory, color='r', linewidth=1.5, label='simulated')
+    
+    axes[1, 0].set_xlabel("Time (s)")
+    axes[1, 0].set_ylabel("Velocity (rad/s)")
+    axes[1, 0].set_title("Driving Motor Velocity")
+    axes[1, 0].text(0.02, 1.06, "c)", transform=axes[1, 0].transAxes, fontsize=12, verticalalignment='top')
+    axes[1, 0].grid(True, alpha=0.3)
+    axes[1, 0].legend()
 
-    # Plot states
-    for state_idx in state_indices_to_plot:
-        state_type = None
-        label_suffix = f"State {state_idx}"
-        ylabel = 'State Value'
-        sensor_pos = None
-
-        # Determine state type and sensor position
-        if state_idx < torque_state_boundary:
-            state_type = 'torque'
-            label_suffix = f"Torque State {state_idx}"
-            ylabel = 'Shaft Torque (Nm)'
-            sensor_pos = torque_index_map.get(state_idx)
-        elif state_idx < n_states:
-            state_type = 'velocity'
-            label_suffix = f"Velocity State {state_idx}"
-            ylabel = 'Velocity (rad/s)'
-            sensor_pos = velocity_index_map.get(state_idx)
-
-        # Plot estimated state
-        axs[plot_idx].plot(t, xhat[state_idx, :], color='r', alpha=0.7, linewidth=1.5, label=f'estimated {label_suffix.lower()}')
-
-        # Plot true state if available
-        ref_pos = ref_row_to_idx.get(int(state_idx))
-        if ref_pos is not None and ref_data is not None:
-            true_trajectory = ref_data[:,ref_pos]
-            if true_trajectory.shape == t.shape or true_trajectory.shape == t.shape[::-1]:
-                axs[plot_idx].plot(t, true_trajectory, color='C0', alpha=0.85, linewidth=1.2, label=f'true {label_suffix.lower()}')
-            elif true_trajectory.ndim == 1 and true_trajectory.size == t.size:
-                axs[plot_idx].plot(t, true_trajectory, color='C0', alpha=0.85, linewidth=1.2, label=f'true {label_suffix.lower()}')
-
-        # Plot measurements
-        measured_indices = sensor_index_map.get(state_idx, [])
-        if measured_indices:
-            for meas_idx in measured_indices:
-                meas_label = 'measurement'
-                if meas_idx < len(sensor_types):
-                    meas_label = f"measurement ({sensor_types[meas_idx]})"
-                axs[plot_idx].plot(t, y[:, meas_idx], color='k', alpha=0.5, linewidth=1, label=meas_label)
-
-        # Add disk label to title if available
-        disk_label = ""
-        if state_type == 'torque' and torque_sensors is not None and len(torque_sensors) > 0:
-            if sensor_pos is not None and sensor_pos < len(torque_sensors):
-                disk_label = f"Disk {torque_sensors[sensor_pos]}"
-        elif state_type == 'velocity' and velocity_sensors is not None and len(velocity_sensors) > 0:
-            if sensor_pos is not None and sensor_pos < len(velocity_sensors):
-                disk_label = f"Disk {velocity_sensors[sensor_pos]}"
-        
-        title_parts = [label_suffix]
-        if disk_label:
-            title_parts.append(f"({disk_label})")
-        axs[plot_idx].set_title(' '.join(title_parts))
-        axs[plot_idx].set_ylabel(ylabel)
-        axs[plot_idx].legend()
-        plot_idx += 1
+    # Bottom right: Last velocity state (Load Motor Velocity)
+    axes[1, 1].plot(t, xhat[last_velocity_idx, :], "r", linewidth=1.5, label='estimated')
+    
+    # Plot true state if available
+    ref_pos = ref_row_to_idx.get(int(last_velocity_idx))
+    if ref_pos is not None and ref_data is not None:
+        true_trajectory = ref_data[:, ref_pos]
+        if true_trajectory.ndim == 1 and true_trajectory.size == t.size:
+            axes[1, 1].plot(t, true_trajectory, color='C0', alpha=0.85, linewidth=1.2, label='simulated')
+    
+    axes[1, 1].set_xlabel("Time (s)")
+    axes[1, 1].set_ylabel("Velocity (rad/s)")
+    axes[1, 1].set_title("Load Motor Velocity")
+    axes[1, 1].text(0.02, 1.06, "d)", transform=axes[1, 1].transAxes, fontsize=12, verticalalignment='top')
+    axes[1, 1].grid(True, alpha=0.3)
+    axes[1, 1].legend()
     
     plt.tight_layout()
     plt.show()
 
+    # Second plot of intermediate disk states
+    fig, axes = plt.subplots(1, 2, figsize=(9, 4))
+    axes[0].plot(t, xhat[11, :], "r", linewidth=1.5, label='estimated')
+    axes[0].set_xlabel("Time (s)")
+    axes[0].set_ylabel("Torque (Nm)")
+    axes[0].set_title("Disk 10 Torque")
+    axes[0].text(0.02, 1.06, "a)", transform=axes[0].transAxes, fontsize=12, verticalalignment='top')
+    axes[0].grid(True, alpha=0.3)
+    
+
+    axes[1].plot(t, xhat[30, :], "r", linewidth=1.5, label='estimated')
+    axes[1].set_xlabel("Time (s)")
+    axes[1].set_ylabel("Velocity (rad/s)")
+    axes[1].set_title("Disk 10 Velocity")
+    axes[1].text(0.02, 1.06, "b)", transform=axes[1].transAxes, fontsize=12, verticalalignment='top')
+    axes[1].grid(True, alpha=0.3)
+
+    # Add true states
+    ref_pos = ref_row_to_idx.get(int(11))
+    if ref_pos is not None and ref_data is not None:
+        true_trajectory = ref_data[:, ref_pos]
+        if true_trajectory.ndim == 1 and true_trajectory.size == t.size:
+            axes[0].plot(t, true_trajectory, color='C0', alpha=0.85, linewidth=1.2, label='simulated')
+    ref_pos = ref_row_to_idx.get(int(31))
+    if ref_pos is not None and ref_data is not None:
+        true_trajectory = ref_data[:, ref_pos]
+        if true_trajectory.ndim == 1 and true_trajectory.size == t.size:
+            axes[1].plot(t, true_trajectory, color='C0', alpha=0.85, linewidth=1.2, label='simulated')
+
+    axes[0].legend()
+    axes[1].legend()
+
+    plt.tight_layout()
+    plt.show()
+    
+
 
 if __name__ == "__main__":
-    plot_results('data/mhe_results.npz', state_indices=[8,18,26,40])
+    plot_results('data/mhe_results.npz')
 

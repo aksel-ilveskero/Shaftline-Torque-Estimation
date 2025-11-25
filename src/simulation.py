@@ -101,7 +101,7 @@ def get_load_case(load_case: str, t: np.ndarray, params: Optional[Dict] = None) 
         # Impulse loads: short duration impulses
         impulse_times = [int(N / 4), int(N / 2), int(3 * N / 4)]
         impulse_duration = int(N * 0.03)
-        impulse_magnitude = 6.0
+        impulse_magnitude = 9.5
         for imp_time in impulse_times:
             end_idx = min(imp_time + impulse_duration, N)
             u2[imp_time:end_idx] = impulse_magnitude
@@ -236,13 +236,14 @@ def simulate_data(assembly, config: Dict) -> Dict:
     velocity_state_idx = (n_states + 1) // 2
 
     # Generate load torque (u2) based on load_case
-    u2 = get_load_case(load_case, t, config.get("load_case_params"))
+    u2_clean = get_load_case(load_case, t, config.get("load_case_params"))
 
     # Simulation arrays
     xout = np.zeros((N, n_states))
     y = np.zeros((N, C_meas.shape[0]))
     u1 = np.zeros(N)
     u1_clean = np.zeros(N)
+    u2 = np.zeros(N)
 
     # Convert speed_target to array if scalar
     if np.isscalar(speed_target):
@@ -268,8 +269,12 @@ def simulate_data(assembly, config: Dict) -> Dict:
         u1_clean[i] = np.clip(u1_clean[i], -10, 10)
 
         # Add actuator noise to u1
-        actuator_noise = np.random.normal(0, actuator_noise_std)
-        u1[i] = u1_clean[i] + actuator_noise
+        actuator_noise_u1 = np.random.normal(0, actuator_noise_std)
+        u1[i] = u1_clean[i] + actuator_noise_u1
+
+        # Add actuator noise to u2 (load torque)
+        actuator_noise_u2 = np.random.normal(0, actuator_noise_std)
+        u2[i] = u2_clean[i] + actuator_noise_u2
 
         # State update with process noise
         if i < N - 1:
@@ -291,30 +296,40 @@ def simulate_data(assembly, config: Dict) -> Dict:
     velocity_meas = np.column_stack(velocity_measurements) if velocity_measurements else np.array([]).reshape(N, 0)
 
     # Plot simulation results for verification
-    fig, axes = plt.subplots(3, 1, figsize=(10, 8))
+    fig, axes = plt.subplots(2, 2, figsize=(9, 9))
 
-    # Plot inputs (motor torque and load)
-    axes[0].plot(t, u1, "b-", linewidth=1.5, label="Motor Torque (u1)")
-    axes[0].plot(t, u2, "orange", linewidth=1.5, label="Load Torque (u2)")
-    axes[0].set_xlabel("Time (s)")
-    axes[0].set_ylabel("Torque (Nm)")
-    axes[0].set_title("Inputs: Motor and Load Torque")
-    axes[0].legend()
-    axes[0].grid(True, alpha=0.3)
+    # Skip first 250 values
+    skip = 250
 
-    # Plot one velocity state from xout
-    axes[1].plot(t, xout[:, velocity_state_idx], "g-", linewidth=1.5)
-    axes[1].set_xlabel("Time (s)")
-    axes[1].set_ylabel("Velocity (rad/s)")
-    axes[1].set_title("Velocity State (from xout)")
-    axes[1].grid(True, alpha=0.3)
+    # Upper row: u1 (left) and u2 (right)
+    axes[0, 0].plot(t[skip:], u1[skip:], "r", linewidth=1.5)
+    axes[0, 0].set_xlabel("Time (s)")
+    axes[0, 0].set_ylabel("Torque (Nm)")
+    axes[0, 0].set_title("Driving Motor Torque")
+    axes[0, 0].text(0.02, 1.05, "a)", transform=axes[0, 0].transAxes, fontsize=12, fontweight='bold', verticalalignment='top')
+    axes[0, 0].grid(True, alpha=0.3)
 
-    # Plot one angle/torque state from xout (first state, typically angle)
-    axes[2].plot(t, xout[:, 7], "r-", linewidth=1.5)
-    axes[2].set_xlabel("Time (s)")
-    axes[2].set_ylabel("Shaft Torque (Nm)")
-    axes[2].set_title("Shaft Torque (from xout)")
-    axes[2].grid(True, alpha=0.3)
+    axes[0, 1].plot(t[skip:], u2[skip:], "r", linewidth=1.5)
+    axes[0, 1].set_xlabel("Time (s)")
+    axes[0, 1].set_ylabel("Torque (Nm)")
+    axes[0, 1].set_title("Load Motor Torque")
+    axes[0, 1].text(0.02, 1.05, "b)", transform=axes[0, 1].transAxes, fontsize=12, fontweight='bold', verticalalignment='top')
+    axes[0, 1].grid(True, alpha=0.3)
+
+    # Lower row: xout[:, 21] (left) and xout[:, -1] (right)
+    axes[1, 0].plot(t[skip:], xout[skip:, 21], "r", linewidth=1.5)
+    axes[1, 0].set_xlabel("Time (s)")
+    axes[1, 0].set_ylabel("Velocity (rad/s)")
+    axes[1, 0].set_title("Driving Motor Velocity")
+    axes[1, 0].text(0.02, 1.05, "c)", transform=axes[1, 0].transAxes, fontsize=12, fontweight='bold', verticalalignment='top')
+    axes[1, 0].grid(True, alpha=0.3)
+
+    axes[1, 1].plot(t[skip:], xout[skip:, -1], "r", linewidth=1.5)
+    axes[1, 1].set_xlabel("Time (s)")
+    axes[1, 1].set_ylabel("Velocity (rad/s)")
+    axes[1, 1].set_title("Load Motor Velocity")
+    axes[1, 1].text(0.02, 1.05, "d)", transform=axes[1, 1].transAxes, fontsize=12, fontweight='bold', verticalalignment='top')
+    axes[1, 1].grid(True, alpha=0.3)
 
     plt.tight_layout()
     plt.show()

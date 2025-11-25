@@ -371,7 +371,6 @@ class MHEEstimator(StateEstimator):
         total_start = time.time()
 
         for i in range(N - self.horizon_length + 1):
-            print(i)
             y_window = y[i : i + self.horizon_length]
             u1_window = u1[:, i : i + self.horizon_length]
 
